@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "name": "elasticSearchBackup",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 30 7 * * *"
+    }
+  ],
+  "scriptFile": "../dist/elasticSearchBackup/index.js"
+}

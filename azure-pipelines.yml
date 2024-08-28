@@ -1,0 +1,159 @@
+# Integrations - Automated Elasticsearch Backup
+
+variables:
+  - name: folderName
+    value: tasks/automate-application-backup
+  - name: functionAppBaseName
+    value: func-elasticsearch-backup
+  - group: azure-environments
+  - group: helm_authproxy_client
+  - group: elasticsearch-main
+  - group: external-facing-endpoints
+  - group: twilio
+  - group: helm_ElasticSearch
+
+trigger:
+  batch: no
+  branches:
+      include:
+          - develop
+          - main
+  paths:
+      include:
+          - tasks/automate-application-backup/*
+          
+resources:
+  pipelines:
+    - pipeline: terraformintegrations
+      source: terraform-integrations
+      trigger:
+        branches:
+          include:
+            - develop
+            - main
+  repositories:
+    - repository: templates
+      type: git
+      name: folderName/folderName
+
+stages:
+- stage: Build
+  jobs:
+    - template: ../../build-pipeline-templates/templates/npm-audit.yml
+      parameters:
+        folderName: $(folderName)
+    - template: ../../pipeline-templates/function-app-build-and-zip.yml
+      parameters:
+        folderName: $(folderName)
+- stage: Deploy_QA
+  dependsOn: Build
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'),  eq(variables['Build.Reason'], 'Manual')))
+  jobs:
+    - job: DeployFunction
+      steps:
+        - task: DownloadBuildArtifacts@0
+          inputs:
+            artifactName: drop
+        - task: AzureFunctionApp@1
+          inputs:
+            azureSubscription: $(qaAzureSubscription)
+            resourceGroupName: $(qaIntFuncResourceGroup)
+            appType: functionApp
+            deploymentMethod: zipDeploy
+            appName: $(functionAppBaseName)-qa001
+            package: $(System.ArtifactsDirectory)/**/$(Build.BuildId).zip
+            appSettings: >
+              -ELASTIC_SEARCH_PASSWORD_QA=$(QA_ELASTICSEARCH_PASSWORD)
+              -ELASTIC_SEARCH_USERNAME=$(ELASTICSEARCH_USERNAME)
+              -ELASTIC_SEARCH_HOST_QA=$(QA001_ELASTICSEARCH_HOST)
+              -GRAPHQL_URL $(QA001_GRAPHQL_URL)
+              -AUDIT_URL $(QA001_AUDIT_URL)
+              -MSAUTH_CLIENTID $(QA001_MSAUTH_CLIENTID)
+              -MSAUTH_SECRET $(QA001_MSAUTH_SECRET)
+              -MSAUTH_URL $(QA001_MSAUTH_URL)
+              -MSAUTH_SCOPE $(QA001_MSAUTH_SCOPE)
+              -AUTHPROXY_URL $(QA001_AUTHPROXY_URL)
+              -DATAHUB_SQL_SERVER_URL $(QA001_DATAHUB_SQL_SERVER_URL)
+              -DATAHUB_SQL_SERVER_DATABASE $(QA001_DATAHUB_SQL_SERVER_DATABASE)
+              -DATAHUB_SQL_USERNAME $(QA001_DATAHUB_SQL_USERNAME)
+              -DATAHUB_SQL_PASSWORD $(QA001_DATAHUB_SQL_PASSWORD)
+              -AUTH0_BASE_URL $(QA001_AUTH0_BASE_URL)
+              -TWILIO_SENDGRID_API_KEY $(TWILIOSENDGRIDAPIKEY)
+              -COMPANY_EMAIL $(QA001_COMPANY_EMAIL)
+              -BLOB_STORAGE_URL $(QA001_BLOB_STORAGE_URL)
+
+- stage: Deploy_UAT
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'),  eq(variables['Build.Reason'], 'Manual')))
+  dependsOn: Deploy_QA
+  jobs:
+  - job: DeployFunction
+    steps:
+      - task: DownloadBuildArtifacts@0
+        inputs:
+          artifactName: drop
+      - task: AzureFunctionApp@1
+        inputs:
+          azureSubscription: $(prodAzureSubscription)
+          resourceGroupName: $(uatIntFuncResourceGroup)
+          appType: functionApp
+          deploymentMethod: runFromPackage
+          appName: $(functionAppBaseName)-uat
+          package: $(System.ArtifactsDirectory)/**/$(Build.BuildId).zip
+          appSettings: >
+            -ELASTIC_SEARCH_USERNAME=$(ELASTICSEARCH_USERNAME)
+            -ELASTIC_SEARCH_PASSWORD_UAT=$(UAT_ELASTICSEARCH_PASSWORD)
+            -ELASTIC_SEARCH_HOST_UAT=$(UAT_ELASTICSEARCH_HOST)
+            -GRAPHQL_URL $(UAT_GRAPHQL_URL)
+            -AUDIT_URL $(UAT_AUDIT_URL)
+            -MSAUTH_CLIENTID $(UAT_MSAUTH_CLIENTID)
+            -MSAUTH_SECRET $(UAT_MSAUTH_SECRET)
+            -MSAUTH_URL $(UAT_MSAUTH_URL)
+            -MSAUTH_SCOPE $(UAT_MSAUTH_SCOPE)
+            -AUTHPROXY_URL $(UAT_AUTHPROXY_URL)
+            -DATAHUB_SQL_SERVER_URL $(UAT_DATAHUB_SQL_SERVER_URL)
+            -DATAHUB_SQL_SERVER_DATABASE $(UAT_DATAHUB_SQL_SERVER_DATABASE)
+            -DATAHUB_SQL_USERNAME $(UAT_DATAHUB_SQL_USERNAME)
+            -DATAHUB_SQL_PASSWORD $(UAT_DATAHUB_SQL_PASSWORD)
+            -AUTH0_BASE_URL $(UAT_AUTH0_BASE_URL)
+            -TWILIO_SENDGRID_API_KEY $(TWILIOSENDGRIDAPIKEY)
+            -COMPANY_EMAIL $(UAT_COMPANY_EMAIL)
+            -BLOB_STORAGE_URL $(UAT_BLOB_STORAGE_URL)
+           
+- stage: Deploy_PROD
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'),  eq(variables['Build.Reason'], 'Manual')))
+  dependsOn: Deploy_UAT
+  jobs:
+    - deployment: Prod
+      environment: Prod-Integrations-001
+    - job: DeployFunction
+      steps:
+        - task: DownloadBuildArtifacts@0
+          inputs:
+            artifactName: drop
+        - task: AzureFunctionApp@1
+          inputs:
+            azureSubscription: $(prodAzureSubscription)
+            resourceGroupName: $(prodIntFuncResourceGroup)
+            appType: functionApp
+            deploymentMethod: runFromPackage
+            appName: $(functionAppBaseName)-prod
+            package: $(System.ArtifactsDirectory)/**/$(Build.BuildId).zip
+            appSettings: >
+              -ELASTIC_SEARCH_PASSWORD_PROD=$(PROD_ELASTICSEARCH_PASSWORD)
+              -ELASTIC_SEARCH_USERNAME=$(ELASTICSEARCH_USERNAME)
+              -ELASTIC_SEARCH_HOST_PROD=$(PROD_ELASTICSEARCH_HOST)
+              -GRAPHQL_URL $(PROD_GRAPHQL_URL)
+              -AUDIT_URL $(PROD_AUDIT_URL)
+              -MSAUTH_CLIENTID $(PROD_MSAUTH_CLIENTID)
+              -MSAUTH_SECRET $(PROD_MSAUTH_SECRET)
+              -MSAUTH_URL $(PROD_MSAUTH_URL)
+              -MSAUTH_SCOPE $(PROD_MSAUTH_SCOPE)
+              -AUTHPROXY_URL $(PROD_AUTHPROXY_URL)
+              -DATAHUB_SQL_SERVER_URL $(PROD_DATAHUB_SQL_SERVER_URL)
+              -DATAHUB_SQL_SERVER_DATABASE $(PROD_DATAHUB_SQL_SERVER_DATABASE)
+              -DATAHUB_SQL_USERNAME $(PROD_DATAHUB_SQL_USERNAME)
+              -DATAHUB_SQL_PASSWORD $(PROD_DATAHUB_SQL_PASSWORD)
+              -AUTH0_BASE_URL $(PROD_AUTH0_BASE_URL)
+              -TWILIO_SENDGRID_API_KEY $(TWILIOSENDGRIDAPIKEY)
+              -COMPANY_EMAIL $(PROD_COMPANY_EMAIL)
+              -BLOB_STORAGE_URL $(PROD_BLOB_STORAGE_URL)
