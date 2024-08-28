@@ -70,21 +70,19 @@ export enum LogActions {
     BACKUP_COMPLETE = 'BACKUP_COMPLETE'
 }
 
-export const ELASTIC_SEARCH_PASSWORD_PROD =
-    process.env.ELASTIC_SEARCH_PASSWORD_PROD || 'hCHRwr9x3z5LkwH9xPbvsMCf';
+export const ELASTIC_SEARCH_PASSWORD_PROD = process.env.ELASTIC_SEARCH_PASSWORD_PROD;
 export const ELASTIC_SEARCH_HOST_PROD =
     process.env.ELASTIC_SEARCH_HOST_PROD || 'https://10.0.244.137:9200';
 
-export const ELASTIC_SEARCH_PASSWORD_UAT =
-    process.env.ELASTIC_SEARCH_PASSWORD_UAT || 'aaLWFgxNc8SPZFV4QYH3rpZ3';
+export const ELASTIC_SEARCH_PASSWORD_UAT = process.env.ELASTIC_SEARCH_PASSWORD_UAT;
 export const ELASTIC_SEARCH_HOST_UAT =
     process.env.ELASTIC_SEARCH_HOST_UAT || 'https://10.0.176.91:9200';
 
-export const ELASTIC_SEARCH_PASSWORD_QA = process.env.ELASTIC_SEARCH_PASSWORD_QA || 'VlcuMuNwQOeQ';
+export const ELASTIC_SEARCH_PASSWORD_QA = process.env.ELASTIC_SEARCH_PASSWORD_QA;
 export const ELASTIC_SEARCH_HOST_QA =
     process.env.ELASTIC_SEARCH_HOST_QA || 'https://10.0.95.230:9200';
 
-export const ELASTIC_SEARCH_USERNAME = process.env.ELASTIC_SEARCH_USERNAME || 'elastic';
+export const ELASTIC_SEARCH_USERNAME = process.env.ELASTIC_SEARCH_USERNAME;
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -113,8 +111,8 @@ export const DATAFEED_PROCESSOR_HOST_OUTPUT_CONTAINER =
 const DATAHUB_SQL_SERVER_URL =
     process.env.DATAHUB_SQL_SERVER_URL || 'svr-data-hub-qa.database.windows.net';
 const DATAHUB_SQL_SERVER_DATABASE = process.env.DATAHUB_SQL_SERVER_DATABASE || 'db-data-hub-qa';
-const DATAHUB_SQL_USERNAME = process.env.DATAHUB_SQL_USERNAME || 'datahubconnectorservice';
-const DATAHUB_SQL_PASSWORD = process.env.DATAHUB_SQL_PASSWORD || 'hwXXj65G#IiSmPvI';
+const DATAHUB_SQL_USERNAME = process.env.DATAHUB_SQL_USERNAME;
+const DATAHUB_SQL_PASSWORD = process.env.DATAHUB_SQL_PASSWORD;
 
 export const DATAHUB_SQL_DATABASE_CONFIG = {
     server: DATAHUB_SQL_SERVER_URL,
